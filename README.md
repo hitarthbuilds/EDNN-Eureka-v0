@@ -1,156 +1,134 @@
-# PCN-Eureka-v0  
-**Event-Driven Asynchronous Neural Execution (Minimal Proof)**
+# **EDNN-eureka-v0**
 
-## What this repository demonstrates
-
-This repository provides a minimal, executable proof of a **non-layer-synchronous neural execution model**.
-
-Specifically, it demonstrates a single forward pass in which:
-
-- Multiple internal agents execute **concurrently**
-- A shared blackboard enables **event-driven communication**
-- An integrator consumes **partial results before all agents complete**
-- The output artifact **evolves over wall-clock time**
-- Final consistency is achieved **without enforcing a global synchronization barrier**
-
-This behavior cannot be represented as a standard Transformer, Mixture-of-Experts, or any layer-synchronous neural DAG.
+### *Event-Driven Neural Networks: Breaking Layer-Synchronous Execution*
 
 ---
 
-## Core claim (precise and falsifiable)
+## Overview
 
-> **The output of a forward pass can depend on the temporal availability of internal computation, not only on input values.**
+This repository investigates **Event-Driven Neural Networks (EDNNs)** — a class of neural architectures in which the forward pass is **asynchronous**, **event-driven**, and **temporally extended**, rather than strictly layer-synchronous and atomic.
 
-In other words, the forward pass is **temporally extended**, not atomic.
+In standard neural networks (e.g., Transformers, Mixture-of-Experts), the forward pass produces an output only after *all* components finish computation. EDNNs relax this assumption by allowing intermediate neural components to contribute to an evolving output artifact as soon as they complete execution.
 
----
-
-## Why this matters
-
-Modern neural architectures implicitly assume that a forward pass is:
-- layer-synchronous
-- barrier-enforced
-- representable as a directed acyclic graph (DAG)
-
-In such systems:
-- intermediate computation is not causally observable
-- partial results cannot influence output until all computation completes
-
-This repository demonstrates a counterexample.
+The goal of this project is to establish **existence, trainability, and execution semantics**, not performance supremacy.
 
 ---
 
-## Execution trace (key evidence)
+## Core Concept
 
-When running `python main.py`, the system produces logs similar to:
+Traditional neural execution assumes:
+
+> **Output exists only after all layers complete.**
+
+EDNN challenges this assumption.
+
+In EDNN:
+
+* Multiple neural components (“agents”) execute asynchronously
+* Agents write outputs to a shared, differentiable **blackboard**
+* An **integrator** continuously aggregates available results
+* The model produces a **living output artifact** that improves over wall-clock time
+* The entire system remains **fully differentiable** and trainable via backpropagation
+
+The forward pass is therefore a **trajectory over time**, not a single atomic operation.
+
+---
+
+## What This Repository Demonstrates
+
+This repository provides empirical evidence for the following claims:
+
+* ✅ Asynchronous neural execution is compatible with gradient-based learning
+* ✅ Randomized execution order does **not** destabilize training
+* ✅ Credit assignment remains well-defined under temporal non-determinism
+* ✅ Event-driven neural architectures can converge reliably across seeds
+
+These claims are validated via controlled synthetic stress tests.
+
+---
+
+## Repository Structure
 
 ```
-
-[t=  0.00s] Integrator START
-[t=  0.00s] Agent structure START
-[t=  0.00s] Agent code START
-
-[t=  1.00s] Agent structure END (wrote result)
-[t=  1.01s] Integrator UPDATED artifact with [structure]
-
-[t=  3.01s] Agent code END (wrote result)
-[t=  3.05s] Integrator UPDATED artifact with [code]
-
-[t=  3.53s] Integrator STOP
-[t=  3.62s] FINAL ARTIFACT: {...}
-
-```
-
-This shows that:
-- the integrator reacts to early results
-- the output artifact changes before all agents finish
-- computation proceeds without a global synchronization point
-
----
-
-## What this is (and is not)
-
-**This is:**
-- an execution-model proof
-- an event-driven forward-pass demonstration
-- a counterexample to layer-synchronous assumptions
-
-**This is not:**
-- a learning system
-- a benchmark comparison
-- a claim of superior performance
-- an AGI proposal
-
-Learning, optimization, and scaling are intentionally excluded.
-
----
-
-## Minimal architecture
-
-```
-
-Input
-↓
-[ Concurrent Agents ]
-↘        ↙
-Shared Blackboard
-↓
-Event-Driven Integrator
-↓
-Evolving Output Artifact
-
-````
-
-Agents execute independently.
-The integrator reacts as results become available.
-No global barrier exists.
-
----
-
-## Reproducibility
-
-Run:
-
-```bash
-python main.py
-````
-
-No dependencies beyond Python standard library.
-
----
-
-## Status
-
-This repository is intentionally minimal and frozen at **v0**.
-
-Its sole purpose is to demonstrate the existence of asynchronous,
-event-driven neural execution within a single forward pass.
-
-Further work (learning, differentiability, scaling) is out of scope.
-
+.
+├── agent.py                      # Neural agent modules
+├── blackboard.py                 # Shared differentiable memory
+├── integrator.py                 # Event-driven integrator
+├── main.py                       # Core EDNN architecture wiring
+├── stress_test_async_learning.py # Asynchronous learning stress test
+├── utils.py
+└── README.md
 ```
 
 ---
 
-## What to do immediately after this
+## Stress Test: Asynchronous Learning Dynamics
 
-1. Paste this into `README.md`
-2. Commit with message:
-```
+The file `stress_test_async_learning.py` implements a **synthetic learning task** designed to stress-test learning dynamics under asynchronous execution.
 
-Clarify core claim and document asynchronous forward-pass proof
+### Test Properties
 
-```
-3. Do **not** change code for now
+* Execution order randomized every forward pass
+* No layer-synchronization barriers
+* Same task, loss, optimizer, and hyperparameters across seeds
+* Multi-seed evaluation
 
-At this point:
-- the repo has a clear claim
-- the evidence matches the claim
-- the scope is controlled
+### Result
 
-This is the version you show your HOD.  
-This is the version you reference in a paper draft.
+Loss decreases smoothly and consistently across all seeds, demonstrating that **asynchronous execution does not impede convergence**.
 
-Next step, when you’re ready:  
-we turn this README into the **Introduction + Problem Statement** of a paper.
-```
+This experiment serves as an **existence proof**, not a benchmark.
+
+---
+
+## What EDNN Is *Not*
+
+* ❌ Not a Transformer replacement
+* ❌ Not a performance benchmark
+* ❌ Not a cognitive or brain model
+* ❌ Not a production-ready system
+
+This work focuses on **execution semantics**, not optimization or scale.
+
+---
+
+## Current Research Status
+
+**Phase:** Existence proof & architectural grounding
+
+**Completed:**
+
+* Asynchronous learning stress test
+* Architecture-grounded validation (Agents + Blackboard + Integrator)
+
+**In Progress:**
+
+* Wall-clock time instrumentation
+* Partial output quality vs. time analysis
+* Comparison with strictly synchronous baselines
+
+---
+
+## Naming Note
+
+Early drafts referred to this architecture as **PCN (Parallel Cognition Network)**.
+The name has been updated to **EDNN (Event-Driven Neural Network)** to more accurately reflect the architectural contribution.
+
+Internal class names may still reflect early naming and will be updated once the architecture stabilizes.
+
+---
+
+## Disclaimer
+
+This repository represents **active research**.
+APIs, abstractions, and naming may change as experiments and theory mature.
+
+---
+
+## Maintainer
+
+**Hitarth Desai**
+Research-focused exploration. Feedback and discussion welcome.
+
+---
+
