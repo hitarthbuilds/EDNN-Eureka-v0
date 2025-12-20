@@ -1,20 +1,21 @@
-import time
-from utils import log
+import torch
+import torch.nn as nn
 
-class Integrator:
-    def __init__(self, blackboard):
-        self.blackboard = blackboard
-        self.seen = set()
-        self.artifact = {}
+class Integrator(nn.Module):
+    def __init__(self, artifact_dim=8):
+        super().__init__()
+        self.weights = nn.ParameterDict()
+        self.artifact_dim = artifact_dim
 
-    def run(self, stop_event):
-        log("Integrator START")
-        while not stop_event.is_set():
-            snapshot = self.blackboard.snapshot()
-            for k, v in snapshot.items():
-                if k not in self.seen:
-                    self.seen.add(k)
-                    self.artifact[k] = v
-                    log(f"Integrator UPDATED artifact with [{k}]")
-            time.sleep(0.05)
-        log("Integrator STOP")
+    def register_agent(self, agent_name):
+        self.weights[agent_name] = nn.Parameter(
+            torch.randn(self.artifact_dim, self.artifact_dim) * 0.1
+        )
+
+    def forward(self, blackboard, batch_size):
+        artifact = torch.zeros(batch_size, self.artifact_dim)
+
+        for agent_name, output in blackboard.read_all().items():
+            artifact = artifact + output @ self.weights[agent_name].T
+
+        return artifact

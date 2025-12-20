@@ -1,48 +1,37 @@
-import threading
-import time
+import torch
+import torch.nn as nn
+import random
 
 from agent import Agent
 from blackboard import Blackboard
 from integrator import Integrator
-from utils import log
 
-def structure_task():
-    return {"folders": ["src/", "tests/", "README.md"]}
+class PCNModel(nn.Module):
+    def __init__(self, num_agents=3):
+        super().__init__()
 
-def code_task():
-    return {"src/main.py": "print('hello')"}
+        self.agents = nn.ModuleList([
+            Agent(name=f"agent_{i}") for i in range(num_agents)
+        ])
 
-def main():
-    blackboard = Blackboard()
-    stop_event = threading.Event()
+        self.integrator = Integrator(artifact_dim=8)
+        for agent in self.agents:
+            self.integrator.register_agent(agent.name)
 
-    integrator = Integrator(blackboard)
-    integrator_thread = threading.Thread(
-        target=integrator.run,
-        args=(stop_event,),
-        daemon=True
-    )
-    integrator_thread.start()
+        self.head = nn.Linear(8, 1)
 
-    agents = [
-        Agent("structure", 1.0, structure_task),
-        Agent("code", 3.0, code_task),
-    ]
+    def forward(self, x):
+        batch_size = x.size(0)
+        blackboard = Blackboard()
 
-    threads = []
-    for agent in agents:
-        t = threading.Thread(target=agent.run, args=(blackboard,))
-        threads.append(t)
-        t.start()
+        # Simulated asynchronous completion
+        delays = [random.random() for _ in self.agents]
+        execution_order = sorted(range(len(self.agents)), key=lambda i: delays[i])
 
-    for t in threads:
-        t.join()
+        for i in execution_order:
+            agent = self.agents[i]
+            y = agent(x)
+            blackboard.write(agent.name, y)
 
-    time.sleep(0.5)
-    stop_event.set()
-    time.sleep(0.1)
-
-    log(f"FINAL ARTIFACT: {integrator.artifact}")
-
-if __name__ == "__main__":
-    main()
+        artifact = self.integrator(blackboard, batch_size)
+        return self.head(artifact)

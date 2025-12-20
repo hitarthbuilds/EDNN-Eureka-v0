@@ -1,15 +1,17 @@
-import time
-from utils import log
+import torch
+import torch.nn as nn
 
-class Agent:
-    def __init__(self, name, duration, payload_fn):
+class Agent(nn.Module):
+    def __init__(self, input_dim=20, hidden_dim=32, output_dim=8, name="agent"):
+        super().__init__()
         self.name = name
-        self.duration = duration
-        self.payload_fn = payload_fn
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, output_dim),
+        )
 
-    def run(self, blackboard):
-        log(f"Agent {self.name} START")
-        time.sleep(self.duration)
-        result = self.payload_fn()
-        blackboard.write(self.name, result)
-        log(f"Agent {self.name} END (wrote result)")
+    def forward(self, x):
+        return self.net(x)
