@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import random
-
+import time
 from agent import Agent
 from blackboard import Blackboard
 from integrator import Integrator
@@ -35,3 +35,32 @@ class PCNModel(nn.Module):
 
         artifact = self.integrator(blackboard, batch_size)
         return self.head(artifact)
+
+    def forward_with_trace(self, x):
+        batch_size = x.size(0)
+        blackboard = Blackboard()
+
+        trace = []  # (time, artifact)
+        t0 = time.perf_counter()
+    # Simulated heterogeneous compute delays (seconds)
+        delays = [0.2, 0.6, 1.0]
+
+    # Fixed execution order, different completion times
+        execution_order = list(range(len(self.agents)))
+
+        for i in execution_order:
+            agent = self.agents[i]
+            time.sleep(delays[i])
+
+        # Agent finishes and writes result
+            y = agent(x)
+            blackboard.write(agent.name, y)
+
+        # Integrator reacts immediately
+            artifact = self.integrator(blackboard, batch_size)
+
+        # Record wall-clock time
+            t = time.perf_counter() - t0
+            trace.append((t, artifact.detach()))
+
+        return trace
